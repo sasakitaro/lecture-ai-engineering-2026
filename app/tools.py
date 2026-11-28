@@ -5,6 +5,7 @@
 """
 
 import json
+import random
 from functools import cache
 from pathlib import Path
 
@@ -79,6 +80,41 @@ def get_lecture_summary(lecture: int) -> str:
         available = sorted(p.stem for p in (DATA_DIR / "lectures").glob("*.md"))
         return f"第{lecture}回の要点はまだありません。用意されている回: {', '.join(available)}"
     return path.read_text(encoding="utf-8")
+
+
+def make_quiz(lecture: int) -> str:
+    """指定した回（1始まりの整数）の用語から、確認問題を1問作って返す。
+
+    「第2回の確認問題を出して」「第N回の内容でクイズを出して」のように、
+    確認問題やクイズを求められたときに使う。
+    返り値の question を出題し、answer を答え合わせに使う。
+    返り値が error を含むときは、問題を作らず、その内容をそのまま利用者に伝える。
+    """
+    available = sorted({e["lecture"] for e in load_glossary()})
+    available_text = "、".join(f"第{n}回" for n in available)
+    if not available or lecture < 1 or lecture > max(available):
+        return json.dumps(
+            {
+                "error": f"第{lecture}回は範囲外です。確認問題を作れるのは {available_text} です。",
+                "available_lectures": available,
+            },
+            ensure_ascii=False,
+        )
+    terms = [e for e in load_glossary() if e["lecture"] == lecture]
+    if not terms:
+        return json.dumps(
+            {
+                "error": f"第{lecture}回の用語は用語集にないため、確認問題を作れません。"
+                f"確認問題を作れるのは {available_text} です。",
+                "available_lectures": available,
+            },
+            ensure_ascii=False,
+        )
+    entry = random.choice(terms)
+    return json.dumps(
+        {"question": f"「{entry['term']}」の意味は？", "answer": entry["definition"]},
+        ensure_ascii=False,
+    )
 
 
 def search_materials(query: str) -> str:

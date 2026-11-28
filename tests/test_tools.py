@@ -34,6 +34,18 @@ def test_search_reports_not_found():
     assert "見つかりませんでした" in tools.search_glossary("存在しない用語xyz")
 
 
+def test_make_quiz_in_range():
+    result = json.loads(tools.make_quiz(3))
+    assert "question" in result and "answer" in result
+
+
+def test_make_quiz_out_of_range():
+    for lecture in (0, 5, 99):
+        result = json.loads(tools.make_quiz(lecture))
+        assert f"第{lecture}回" in result["error"]
+        assert 5 not in result["available_lectures"]
+
+
 def test_lecture_summary():
     assert "エージェント" in tools.get_lecture_summary(3)
     assert "まだありません" in tools.get_lecture_summary(99)
